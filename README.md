@@ -37,7 +37,9 @@ Code block
     ```
     Configure SMTP settings in your home directory:
     ```bash
-    cat <<EOF > ~/.msmtprc
+    sudo nano /etc/msmtprc
+    ```
+    ```bash
     defaults
     auth           on
     tls            on
@@ -50,16 +52,18 @@ Code block
     user           your_username
     password       your_password
     from           your_email@example.com
-    EOF
-    chmod 600 ~/.msmtprc
     ```
     Ensure `msmtp` is set as the sendmail alternative or adjust `MAIL_PROGRAM` in the code.
+    
+![KeyQuest mail](https://decraene.net/images/keyquest/mail.jpg "KeyQuest mail")
 
   - **sendmail** (alternative):
     ```bash
     sudo apt-get install sendmail
     ```
     Uses `/usr/sbin/sendmail` by default. Configure sendmail per your distribution's docs.
+
+    
 
 ## Installation
 
