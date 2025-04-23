@@ -87,7 +87,7 @@ std::string formatWithCommas128(const std::string &s) {
 // Global configurable settings
 // =====================
 static std::string MAIL_FROM      = "KeyQuest";
-static std::string MAIL_TO        = "hd@live.be";
+static std::string MAIL_TO        = "your@email.com";
 static std::string MAIL_SUBJECT   = "FOUND MATCH!";
 static std::string MAIL_PROGRAM   = "msmtp -t"; // or "/usr/sbin/sendmail" as needed
 
