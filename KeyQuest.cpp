@@ -39,7 +39,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-#include <cmath>       // for fmod and std::gcd
+#include <cmath>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
