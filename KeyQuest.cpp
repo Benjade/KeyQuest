@@ -9,7 +9,7 @@
   for any misuse by third parties.
   ------------------------------------------------------------------------------
 
-  START using one of the following option (optional):
+  START using one of the following optimization (optional):
   export OMP_NUM_THREADS=$(nproc) OMP_PROC_BIND=spread OMP_PLACES=cores ./KeyQuest  # TIP: Bind each thread to a unique core to maximize cache reuse and predictable performance (Real threads).
   export OMP_NUM_THREADS=$(( $(nproc) * 2 )) OMP_PROC_BIND=spread OMP_PLACES=cores ./KeyQuest  # TIP: Spread threads evenly across cores to balance load when oversubscribing (Virtual threads).
   unset OMP_NUM_THREADS OMP_PROC_BIND OMP_PLACES OMP_DYNAMIC  # TIP: Remove custom OpenMP settings to revert to default thread scheduling.
@@ -34,6 +34,7 @@
 #include <utility>
 #include <cstdio>
 #include <numeric>
+#include <random>
 #include <omp.h>
 #include <cctype>
 #include <thread>
@@ -478,51 +479,27 @@ static void pointToCompressedBin(const Point &p,uint8_t out[33]){
 }
 
 // -----------------------------------------------------------------------------
-// Custom random candidate generator using OpenSSL RAND_bytes
+// Thread-local MT19937_64 PRNG and hex LUT for suffix generation
 // -----------------------------------------------------------------------------
-static inline __attribute__((always_inline))
-std::string customRandomHexCandidate(int nbDigits){
-    std::vector<unsigned char> buf(nbDigits);
-    if(RAND_bytes(buf.data(), nbDigits) != 1)
-        throw std::runtime_error("RAND_bytes failed");
-    std::string s;
-    s.reserve(nbDigits);
-    for(int i = 0; i < nbDigits; ++i){
-        unsigned char r = buf[i] & 0x0F;
-        s.push_back(r < 10 ? ('0' + r) : ('a' + (r - 10)));
+thread_local std::mt19937_64 tl_rng(std::random_device{}());
+static char hexLUT[16] = {
+    '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
+};
+static inline std::string fastRandomHex(int n) {
+    std::string s(n, '0');
+    for(int i=0;i<n;i++){
+        uint64_t v = tl_rng() & 0xFULL;
+        s[i] = hexLUT[v];
     }
     return s;
-}
-
-std::string customRandomCandidateBig(int width){
-    int numBytes = (width * 4 + 7) / 8;
-    std::vector<unsigned char> buf(numBytes);
-    if(RAND_bytes(buf.data(), numBytes) != 1)
-        throw std::runtime_error("RAND_bytes failed");
-    std::string s;
-    s.reserve(width);
-    for(int i = 0; i < width; ++i){
-        int byteIndex = i / 2;
-        unsigned char b = buf[byteIndex];
-        unsigned char nibble = (i % 2 == 0) ? ((b >> 4) & 0x0F) : (b & 0x0F);
-        s.push_back(nibble < 10 ? ('0' + nibble) : ('a' + (nibble - 10)));
-    }
-    return s;
-}
-
-std::string customRandomCandidateInRangeBig(const std::string &startHex,
-                                            const std::string &endHex){
-    int width = (int)startHex.size();
-    while(true){
-        std::string cand = customRandomCandidateBig(width);
-        if(cand >= startHex && cand <= endHex)
-            return cand;
-    }
 }
 
 // -----------------------------------------------------------------------------
 // p2pkh in batch
 // -----------------------------------------------------------------------------
+using Align64 = std::array<uint8_t, 64>;
+using Align32 = std::array<uint8_t, 32>;
+
 static inline __attribute__((always_inline))
 void prepareShaBlock(const uint8_t* dataSrc, size_t dataLen, uint8_t* outBlock) {
     std::fill_n(outBlock, 64, 0);
@@ -546,9 +523,6 @@ void prepareRipemdBlock(const uint8_t* dataSrc, uint8_t* outBlock) {
     outBlock[62] = (bitLen >> 8 ) & 0xFF;
     outBlock[63] =  bitLen        & 0xFF;
 }
-
-using Align64 = std::array<uint8_t, 64>;
-using Align32 = std::array<uint8_t, 32>;
 
 static void computeHash160BatchBinSingle(int numKeys,
                                          uint8_t pubKeys[][33],
@@ -964,10 +938,7 @@ static void statsLoop(int totalThreads,
                       const std::vector<unsigned long long>& threadRestarts,
                       long double totalCombos,
                       const std::string &totalCombosStr) {
-    if(!g_altBufferUsed_display){
-        std::cout<<"\033[?1049h";
-        g_altBufferUsed_display=true;
-    }
+    std::cout<<"\033[?1049h";
     while(!g_stopStats.load()){
         auto now = std::chrono::high_resolution_clock::now();
         double dt = std::chrono::duration<double>(now - mainStart).count();
@@ -990,10 +961,7 @@ static void statsLoop(int totalThreads,
         std::cout<<oss.str()<<std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
-    if(g_altBufferUsed_display){
-        std::cout<<"\033[?1049l";
-        g_altBufferUsed_display=false;
-    }
+    std::cout<<"\033[?1049l";
 }
 
 static std::string getHiddenPassword(const std::string &prompt){
@@ -1211,14 +1179,6 @@ int main(int argc, char* argv[])
     {
         int tid = omp_get_thread_num();
 
-        unsigned long seedVal = (unsigned long)(
-            std::chrono::steady_clock::now().time_since_epoch().count() ^ (tid << 16));
-        static thread_local bool seeded = false;
-        if(!seeded){
-            RAND_poll();
-            seeded = true;
-        }
-
         thread_local auto lastUpd = std::chrono::steady_clock::now();
         constexpr std::chrono::milliseconds kREFRESH_DELAY{200};
 
@@ -1266,26 +1226,23 @@ int main(int argc, char* argv[])
                 ++g_threadRestarts[tid];
             }
 
-std::string prefixOrig = thr[tid].startHex.substr(0, seqDigits);
-std::string prefix;
-
-if (seqDigits <= 16) {
-    
-    char lowBuf[32];
-    snprintf(lowBuf, sizeof(lowBuf), "%0*lx", seqDigits, seqPrefix);
-    prefix = lowBuf;
-} else {
-    int highLen = seqDigits - 16;
-    std::string high = prefixOrig.substr(0, highLen);
-
-    char lowBuf[17];
-    snprintf(lowBuf, sizeof(lowBuf), "%016lx", seqPrefix);
-
-    prefix = high + lowBuf;
-}
+            // Generate prefix using thread-local rng if needed
+            std::string prefixOrig = thr[tid].startHex.substr(0, seqDigits);
+            std::string prefix;
+            if(seqDigits <= 16){
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%0*llx", seqDigits, (unsigned long long)seqPrefix);
+                prefix = buf;
+            } else {
+                int highLen = seqDigits - 16;
+                std::string high = prefixOrig.substr(0, highLen);
+                char buf[17];
+                snprintf(buf, sizeof(buf), "%016llx", (unsigned long long)seqPrefix);
+                prefix = high + buf;
+            }
 
             g_prefixesTested.fetch_add(1, std::memory_order_relaxed);
-            std::string suffix = padHex(customRandomHexCandidate(cfg.randomHexCount), cfg.randomHexCount);
+            std::string suffix = fastRandomHex(cfg.randomHexCount);
             std::string candHex = prefix + suffix;
             std::string padded  = padHex(candHex, 64);
 
@@ -1298,13 +1255,12 @@ if (seqDigits <= 16) {
                 continue;
             }
 
-            {
-                auto now = std::chrono::steady_clock::now();
-                if(now - lastUpd >= kREFRESH_DELAY){
-                    std::lock_guard<std::mutex> lk(g_threadKeysMutex);
-                    g_threadKeys[tid] = prefix + ' ' + suffix;
-                    lastUpd = now;
-                }
+            // Update display occasionally
+            auto now = std::chrono::steady_clock::now();
+            if(now - lastUpd >= kREFRESH_DELAY){
+                std::lock_guard<std::mutex> lk(g_threadKeysMutex);
+                g_threadKeys[tid] = prefix + ' ' + suffix;
+                lastUpd = now;
             }
 
             ++localCount;
