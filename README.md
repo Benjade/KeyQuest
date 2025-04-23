@@ -16,7 +16,7 @@ Code block
 
 # KeyQuest
 
-**KeyQuest** is a high-performance C++ tool designed to tackle challenging Bitcoin cryptographic puzzles, such as the 1000 Bitcoin Puzzle (see https://privatekeys.pw/puzzles/bitcoin-puzzle-tx). It performs a hybrid search combining deterministic range scanning with random suffix exploration to find a private key matching a given address.
+**KeyQuest** is a high-performance C++ tool designed to tackle challenging Bitcoin cryptographic puzzles, such as the 1000 Bitcoin Puzzle (see [~1000 BTC Bitcoin Challenge]https://privatekeys.pw/puzzles/bitcoin-puzzle-tx). It performs a hybrid search combining deterministic range scanning with random suffix exploration to find a private key matching a given address.
 
 ## Prerequisites
 
