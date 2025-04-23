@@ -35,7 +35,7 @@ Code block
     ```bash
     sudo apt-get install msmtp
     ```
-    Configure SMTP settings in your home directory:
+    Configure SMTP settings:
     ```bash
     sudo nano /etc/msmtprc
     ```
