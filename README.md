@@ -85,7 +85,7 @@ Run the program and follow the interactive prompts:
 
 - **`-c`**: skip the config-load prompt if `config.txt` exists
 
-Fast test using Address:
+Fast test puzzle 70 using:
 
 19YZECXj3SxEZMoUeJ1yiPsw8xANe7M7QR Range: 349b84b6431a000000:349b84b6431affffff Suffix: 6
 
