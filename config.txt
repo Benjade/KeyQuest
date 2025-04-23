@@ -1,0 +1,5 @@
+encryption=1
+numThreads=256
+address=19vkiEajfhuZ8bs8Zu2jgmC6oqZbWqhxhG
+range=1a0000000000000000:1fffffffffffffffff
+randomHexCount=16
