@@ -28,6 +28,36 @@ Code block
   sudo apt-get update
   sudo apt-get install libssl-dev
   ```
+- Email software for notifications (choose one):
+  - **msmtp**:
+    ```bash
+    sudo apt-get install msmtp
+    ```
+    Configure SMTP settings in your home directory:
+    ```bash
+    cat <<EOF > ~/.msmtprc
+    defaults
+    auth           on
+    tls            on
+    tls_trust_file /etc/ssl/certs/ca-certificates.crt
+    logfile        ~/.msmtp.log
+
+    account        default
+    host           smtp.example.com
+    port           587
+    user           your_username
+    password       your_password
+    from           your_email@example.com
+    EOF
+    chmod 600 ~/.msmtprc
+    ```
+    Ensure `msmtp` is set as the sendmail alternative or adjust `MAIL_PROGRAM` in the code.
+
+  - **sendmail** (alternative):
+    ```bash
+    sudo apt-get install sendmail
+    ```
+    Uses `/usr/sbin/sendmail` by default. Configure sendmail per your distribution's docs.
 
 ## Installation
 
