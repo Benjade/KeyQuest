@@ -31,6 +31,8 @@ Code block
   sudo apt-get install libssl-dev
   ```
 - Email software for notifications (choose one):
+  *(Update the email address in `KeyQuest.cpp` before compiling.)*
+  
   - **msmtp**:
     ```bash
     sudo apt-get install msmtp
@@ -80,10 +82,8 @@ This produces the `KeyQuest` binary in the project root.
 Run the program and follow the interactive prompts:
 
 ```bash
-./KeyQuest [-c]
+./KeyQuest
 ```
-
-- **`-c`**: skip the config-load prompt if `config.txt` exists
 
 Fast test puzzle 70 using:
 
