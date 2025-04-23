@@ -31,6 +31,7 @@ Code block
   sudo apt-get install libssl-dev
   ```
 - Email software for notifications (choose one):
+- 
   *(Update the email address in `KeyQuest.cpp` before compiling.)*
   
   - **msmtp**:
