@@ -54,8 +54,6 @@ Code block
     from           your_email@example.com
     ```
     Ensure `msmtp` is set as the sendmail alternative or adjust `MAIL_PROGRAM` in the code.
-    
-![KeyQuest mail](https://decraene.net/images/keyquest/mail.jpg "KeyQuest mail")
 
   - **sendmail** (alternative):
     ```bash
@@ -63,7 +61,7 @@ Code block
     ```
     Uses `/usr/sbin/sendmail` by default. Configure sendmail per your distribution's docs.
 
-    
+    ![KeyQuest mail](https://decraene.net/images/keyquest/mail.jpg "KeyQuest mail")
 
 ## Installation
 
