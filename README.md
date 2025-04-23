@@ -85,6 +85,9 @@ Run the program and follow the interactive prompts:
 
 - **`-c`**: skip the config-load prompt if `config.txt` exists
 
+Fast test using Address: 
+19YZECXj3SxEZMoUeJ1yiPsw8xANe7M7QR Range: 349b84b6431a000000:349b84b6431affffff Suffix: 6
+
 1. **Load config**: choose to load saved settings from `config.txt`.
 2. **Encryption**: opt to encrypt the result file (`keyfound.txt`) if a key is found.
 3. **Threads**: specify the number of OpenMP threads (default is number of CPU cores).
