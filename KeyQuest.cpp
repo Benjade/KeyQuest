@@ -4,13 +4,19 @@
 
   DISCLAIMER:
   This program is created exclusively for tackling challenging cryptographic puzzles,
-  such as the Satoshi Puzzle. Unauthorized or illicit usage is expressly prohibited,
-  and the author assumes no liability for any misuse by third parties.
+  such as the 1000BTC Bitcoin Challenge (see https://privatekeys.pw/puzzles/bitcoin-puzzle-tx). 
+  Unauthorized or illicit usage is expressly prohibited, and the author assumes no liability 
+  for any misuse by third parties.
   ------------------------------------------------------------------------------
 
-  // TIP : Start with OMP_PROC_BIND=true
+  START using one of the following option (optional):
+  export OMP_NUM_THREADS=$(nproc) OMP_PROC_BIND=spread OMP_PLACES=cores ./KeyQuest  # TIP: Bind each thread to a unique core to maximize cache reuse and predictable performance (Real threads).
+  export OMP_NUM_THREADS=$(( $(nproc) * 2 )) OMP_PROC_BIND=spread OMP_PLACES=cores ./KeyQuest  # TIP: Spread threads evenly across cores to balance load when oversubscribing (Virtual threads).
+  unset OMP_NUM_THREADS OMP_PROC_BIND OMP_PLACES OMP_DYNAMIC  # TIP: Remove custom OpenMP settings to revert to default thread scheduling.
 
-  Fast test using Address: 19YZECXj3SxEZMoUeJ1yiPsw8xANe7M7QR Range: 349b84b6431a000000:349b84b6431affffff Suffix: 6
+  Fast test using Address: 
+  19YZECXj3SxEZMoUeJ1yiPsw8xANe7M7QR Range: 349b84b6431a000000:349b84b6431affffff Suffix: 6
+  -------------------------------------------------------------------------------
 */
 
 #include <immintrin.h>
@@ -85,11 +91,11 @@ static std::string MAIL_TO        = "hd@live.be";
 static std::string MAIL_SUBJECT   = "FOUND MATCH!";
 static std::string MAIL_PROGRAM   = "msmtp -t"; // or "/usr/sbin/sendmail" as needed
 
-// === Couleurs ANSI configurables ===
-static std::string COLOR_FRAME    = "\033[38;5;208m"; // contour / cadre (orange)
-static std::string COLOR_LABEL    = "\033[38;5;221m"; // étiquettes (jaune)
-static std::string COLOR_VALUE    = "\033[1;37m";     // valeurs / détails (blanc lumineux)
-static std::string COLOR_RESET    = "\033[0m";        // réinitialisation
+// === Configurable ANSI Colors ===
+static std::string COLOR_FRAME    = "\033[38;5;208m"; // outline / frame (orange)
+static std::string COLOR_LABEL    = "\033[38;5;221m"; // labels (yellow)
+static std::string COLOR_VALUE    = "\033[1;37m";     // values ​​/ details (bright white)
+static std::string COLOR_RESET    = "\033[0m";        // reset
 
 // =====================
 // Minimal SHA256 and Base58 functions
@@ -653,13 +659,13 @@ static void sendMatchEmail(const std::string &priv,
 
     f.close();
 
-    // Envoi du mail et capture du code de retour
+    // Sending email and capturing the return code
     int ret = system((MAIL_PROGRAM + " < match_email.html").c_str());
     if (ret != 0) {
-        std::cerr << "Erreur d'envoi du mail (code " << ret << ")\n";
+        std::cerr << "Error sending email (code " << ret << ")\n";
     }
 
-    // Nettoyage
+    // Cleaning
     remove("match_email.html");
 }
 
