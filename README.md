@@ -60,7 +60,7 @@ Code block
 
     Test email sending:
     ```bash
-    echo "Ceci est un test." | msmtp hd@live.be
+    echo "This is a test." | msmtp your@email.com
     ```
   - **sendmail** (alternative):
     ```bash
