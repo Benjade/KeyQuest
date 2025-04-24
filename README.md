@@ -58,6 +58,10 @@ Code block
     ```
     Ensure `msmtp` is set as the sendmail alternative or adjust `MAIL_PROGRAM` in the code.
 
+    Test email sending:
+    ```bash
+    echo "Ceci est un test." | msmtp hd@live.be
+    ```
   - **sendmail** (alternative):
     ```bash
     sudo apt-get install sendmail
