@@ -123,7 +123,7 @@ This program uses several optimized BSGS routines by Jean‑Luc Pons, adapted fr
 
 ## Donation
 
-If you find **KeyQuest** useful, consider supporting development:
+If you find **KeyQuest** useful, consider support:
 
 ```
 1Bitcoinfr7ZVB1cFVgLJJcweVt8JR2Z3o
