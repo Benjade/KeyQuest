@@ -25,10 +25,11 @@ Code block
 - A modern Linux distribution
 - A C++17-capable compiler (e.g., `g++`)
 - GNU Make
-- OpenSSL development headers:
+- OpenSSL and build development headers:
   ```bash
   sudo apt-get update
   sudo apt-get install libssl-dev
+  sudo apt install build-essential linux-libc-dev
   ```
 - Email software for notifications (choose one):
 - 
