@@ -123,7 +123,7 @@ During execution, KeyQuest displays live statistics (Mkeys/s, progress, restarts
 
 ## Third-Party Code
 
-This program uses several optimized BSGS routines by Jean‑Luc Pons, adapted from [VanitySearch](https://github.com/JeanLucPons/VanitySearch).
+This program uses several optimized routines by Jean‑Luc Pons, adapted from [VanitySearch](https://github.com/JeanLucPons/VanitySearch) and [Dookoo2](https://github.com/Dookoo2/Cyclone).
 
 ## Donation
 
