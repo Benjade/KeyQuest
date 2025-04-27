@@ -19,7 +19,7 @@ Code block
 **KeyQuest** is a high-performance C++ tool designed to tackle challenging Bitcoin cryptographic puzzles on CPU, such as the 1000 Bitcoin Puzzle (see [~1000 BTC Bitcoin Challenge](https://privatekeys.pw/puzzles/bitcoin-puzzle-tx)). It performs a hybrid search combining deterministic range scanning with random suffix exploration to find a private key matching a given address.
 
 ![KeyQuest](https://decraene.net/images/keyquest/keyquest.jpg "KeyQuest")
-
+*_The image represents a search on 256 virtual threads, the actual CPU count being 6._
 ## Prerequisites
 
 - A modern Linux distribution
