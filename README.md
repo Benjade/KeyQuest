@@ -123,7 +123,7 @@ If you find **KeyQuest** useful, consider support:
 ### 1. Configuration & Command-Line Interface
 
 - **Dynamic batch size**  
-  - **Old:** `POINTS_BATCH_SIZE` fixed at 32768.  
+  - **Old:** `POINTS_BATCH_SIZE` fixed at 512.  
   - **New:** `g_pointsBatchSize` defaults to 512 and can be overridden with `-b <batchSize>`.
 
 - **Enhanced config loading**  
