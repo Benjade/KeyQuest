@@ -148,7 +148,7 @@ If you find **KeyQuest** useful, consider support:
 ### 3. Performance & Batching
 
 - **Pre-computed ECC points**  
-  - **Old:** always 32 768 pre-computed points.  
+  - **Old:** always 512 pre-computed points.  
   - **New:** pre-computes exactly `g_pointsBatchSize` for better memory use and cache locality.
 
 - **Adaptive hashing buffers**  
