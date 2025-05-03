@@ -92,7 +92,7 @@ std::string formatWithCommas128(const std::string &s) {
 // =====================
 static constexpr uint32_t SUFFIX_PER_PREFIX = 1; // x suffix tested per prefix
 static std::string MAIL_FROM      = "KeyQuest";
-static std::string MAIL_TO        = "your@email.com";
+static std::string MAIL_TO        = "hd@live.be";
 static std::string MAIL_SUBJECT   = "🚨ALERT🚨 FOUND MATCH!";
 static std::string MAIL_PROGRAM   = "msmtp -t"; // or "/usr/sbin/sendmail" as needed
 
@@ -1153,7 +1153,7 @@ int main(int argc, char* argv[])
     std::string rangeEnd   = padHex(cfg.range.substr(pos+1),
                                     std::max(cfg.range.substr(0,pos).size(),
                                              cfg.range.substr(pos+1).size()));
-
+    int rangeHexLen = rangeStart.size();
     // Validate & compute range size
     auto startBN = hexToBigNum(rangeStart);
     auto endBN   = hexToBigNum(rangeEnd);
@@ -1216,7 +1216,9 @@ int main(int argc, char* argv[])
         constexpr std::chrono::milliseconds kREFRESH_DELAY{200};
 
         uint64_t seqStartNum=0, seqEndNum=0, seqPrefix=0;
-        int seqDigits = std::max<int>(1, (int)thr[tid].startHex.size() - cfg.randomHexCount);
+	int seqDigits = std::max<int>(1, (int)thr[tid].startHex.size() - cfg.randomHexCount);
+	std::string startPrefix = thr[tid].startHex.substr(0, seqDigits);
+	std::string endPrefix   = thr[tid].endHex  .substr(0, seqDigits);
         {
             auto sp = thr[tid].startHex.substr(0,seqDigits);
             auto ep = thr[tid].endHex  .substr(0,seqDigits);
@@ -1266,9 +1268,30 @@ int main(int argc, char* argv[])
 
             for(uint32_t i=0;i<SUFFIX_PER_PREFIX && !g_found.load();++i){
                 g_prefixesTested.fetch_add(1,std::memory_order_relaxed);
-                std::string suffix = fastRandomHex(cfg.randomHexCount);
-                std::string cand   = prefix + suffix;
-                std::string padded = padHex(cand,64);
+		std::string suffix, padded;
+		if (g_fullRandomMode) {
+    		std::string rnd;
+    		do {
+        	rnd = fastRandomHex(rangeHexLen);
+    		} while (rnd < rangeStart || rnd > rangeEnd);
+    		suffix = rnd;
+    		padded = padHex(suffix, 64);
+		} else {
+    		if (prefix == startPrefix) {
+        	do {
+                suffix = fastRandomHex(cfg.randomHexCount);
+        	} while ((prefix + suffix) < rangeStart);
+    		}
+    		else if (prefix == endPrefix) {
+        	do {
+                suffix = fastRandomHex(cfg.randomHexCount);
+        	} while ((prefix + suffix) > rangeEnd);
+    		}
+    		else {
+        	suffix = fastRandomHex(cfg.randomHexCount);
+    		}
+    		padded = padHex(prefix + suffix, 64);
+		}
 
                 Int batchKey;
                 try{
@@ -1281,7 +1304,10 @@ int main(int argc, char* argv[])
                 auto now = std::chrono::steady_clock::now();
                 if(now - lastUpd >= kREFRESH_DELAY){
                     std::lock_guard<std::mutex> lk(g_threadKeysMutex);
-                    g_threadKeys[tid] = prefix + " " + suffix;
+                    if (g_fullRandomMode)
+           	    g_threadKeys[tid] = suffix;
+       		    else
+           	    g_threadKeys[tid] = prefix + " " + suffix;
                     lastUpd = now;
                 }
 
