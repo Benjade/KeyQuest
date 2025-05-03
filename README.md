@@ -1,19 +1,3 @@
-<!--
-**Markdown Basics**
-
-# Heading 1
-## Heading 2
-**Bold text**
-*Italic text*
-`Inline code`
-```bash
-Code block
-```
-- Unordered list
-1. Ordered list
-[Link text](https://example.com)
--->
-
 # KeyQuest
 
 **KeyQuest** is a high-performance C++ tool designed to tackle challenging Bitcoin cryptographic puzzles on CPU, such as the 1000 Bitcoin Puzzle (see [~1000 BTC Bitcoin Challenge](https://privatekeys.pw/puzzles/bitcoin-puzzle-tx)). It performs a hybrid search combining deterministic range scanning with random suffix exploration to find a private key matching a given address.
@@ -134,3 +118,80 @@ If you find **KeyQuest** useful, consider support:
 1Bitcoinfr7ZVB1cFVgLJJcweVt8JR2Z3o
 ```
 
+## Changelog 3 march 2025
+
+### 1. Configuration & Command-Line Interface
+
+- **Dynamic batch size**  
+  - **Old:** `POINTS_BATCH_SIZE` fixed at 32768.  
+  - **New:** `g_pointsBatchSize` defaults to 512 and can be overridden with `-b <batchSize>`.
+
+- **Enhanced config loading**  
+  - Retains `-c` to load `config.txt`, but now prompts more interactively for encryption, thread count, address, range and random-hex count, with an option to save.
+
+- **Full-random mode support**  
+  - **Old:** hybrid mode required `randomHexCount > 0`.  
+  - **New:** entering `0` activates “full-random” suffix generation across the entire range (`g_fullRandomMode`).
+
+---
+
+### 2. Search Modes & Suffix Generation
+
+- **Hybrid vs. full-random**  
+  - New flag `g_fullRandomMode` automatically set when `randomHexCount == rangeLength`, allowing seamless switch between suffix-per-prefix and pure random.
+
+- **Flexible suffix length**  
+  - Suffix generation now handles any length up to the full range hex width.
+
+---
+
+### 3. Performance & Batching
+
+- **Pre-computed ECC points**  
+  - **Old:** always 32 768 pre-computed points.  
+  - **New:** pre-computes exactly `g_pointsBatchSize` for better memory use and cache locality.
+
+- **Adaptive hashing buffers**  
+  - SHA256/RIPEMD-160 batches sized by `HASH_BATCH_SIZE` and `g_pointsBatchSize`, replacing giant static arrays with `std::array`/`std::vector`.
+
+- **Modern alignment & containers**  
+  - Uses `std::vector`, `std::array`, `alignas`, and `thread_local` for RNG, vector math, and batch buffers.
+
+---
+
+### 4. Display & Statistics
+
+- **Unified summary box**  
+  - Combines speed, total tested, total combos, percent progress, restarts, and elapsed time into one scrolling box.
+
+- **Optional thread-progress view**  
+  - Toggle per-thread key previews with `g_showThreadProgress`.
+
+- **Reduced mutex contention**  
+  - Throttles UI updates via `kREFRESH_DELAY` to minimize lock overhead.
+
+---
+
+### 5. Email & Encryption
+
+- **Streamlined encryption prompt**  
+  - If encryption is enabled in config, prompt for passphrase up front.
+
+- **Same AES-256-CBC + PBKDF2 flow**  
+  - Retains `openssl enc -aes-256-cbc -pbkdf2` but with cleaner file-cleanup logic.
+
+- **HTML email template unchanged**  
+  - Presentation and sending via `msmtp` or `sendmail` remain identical.
+
+---
+
+### 6. Code Modernization & Maintenance
+
+- **Removed redundancies**  
+  - Dropped oversized static buffers; replaced with STL algorithms (`std::fill_n`, `std::reverse`).
+
+- **C++11+ idioms**  
+  - Widespread use of `std::atomic`, `std::mutex`, `std::thread`, `std::ostringstream`, and range-based loops.
+
+- **Improved input validation**  
+  - Validates hex-range formatting, suffix count, and prompts user clearly on errors.
