@@ -69,25 +69,63 @@ This produces the `KeyQuest` binary in the project root.
 
 ## Usage
 
-Run the program and follow the interactive prompts:
+Run the program with optional flags and follow the interactive prompts:
+
+```bash
+./KeyQuest [-c] [-b <batchSize>]
+```
+
+- `-c`  
+  Load saved settings from `config.txt` before prompting.  
+- `-b <batchSize>`  
+  Override ECC batch size (`g_pointsBatchSize`, default = 512).
+
+**Fast-test (Puzzle 70) example**:
 
 ```bash
 ./KeyQuest
+# When prompted, enter:
+#   Address:  19YZECXj3SxEZMoUeJ1yiPsw8xANe7M7QR
+#   Range:    349b84b6431a000000:349b84b6431affffff
+#   Suffix:   6
 ```
 
-Fast test puzzle 70 using:
+1. **Load config**  
+   Choose to load saved settings from `config.txt` (`-c`).
 
-19YZECXj3SxEZMoUeJ1yiPsw8xANe7M7QR Range: 349b84b6431a000000:349b84b6431affffff Suffix: 6
+2. **Batch size**  
+   Override ECC batch size with `-b <batchSize>` (optional).
 
-1. **Load config**: choose to load saved settings from `config.txt`.
-2. **Encryption**: opt to encrypt the result file (`keyfound.txt`) if a key is found.
-3. **Threads**: specify the number of OpenMP threads (default is number of CPU cores).
-4. **Target address**: enter a Base58 Bitcoin address or raw hash160 hex string.
-5. **Search range**: provide a hex range in the form `<start>:<end>` for sequential scanning.
-6. **Random suffix**: set the number of random hex digits for suffix sampling (Hybrid mode).
-7. **Thread progress display**: optionally hide per-thread status output.
+3. **Encryption**  
+   Opt to encrypt the result file (`keyfound.txt`) if a key is found.
 
-During execution, KeyQuest displays live statistics (Mkeys/s, progress, restarts) and per-thread progress in a full-screen terminal. When a matching key is found, an HTML email is sent (via `msmtp` or `sendmail`), and the result is written to `keyfound.txt` (encrypted if enabled).
+4. **Threads**  
+   Specify the number of OpenMP threads (default = CPU cores).
+
+5. **Target address**  
+   Enter a Base58 Bitcoin address (e.g. `19YZECX...`) or a 40-hex-digit raw hash160.
+
+6. **Search range**  
+   Provide a hex range `<start>:<end>` for sequential scanning.
+
+7. **Random suffix**  
+   Set the number of random hex digits for suffix sampling  
+   (`0` = full-random, `>0` = Hybrid mode).
+
+8. **Thread progress display**  
+   Optionally hide per-thread status output.
+
+During execution, KeyQuest displays a full-screen live UI with:
+
+- **Speed** (Mkeys/s)  
+- **Total checked** / **total combos**  
+- **% progress**, **prefix restarts**, **elapsed time**  
+- Optional **per-thread progress**
+
+When a matching key is found:
+
+- Sends an **HTML email** via `msmtp` (or `sendmail`) containing the private key, public key, WIF & stats.  
+- Appends the result to `keyfound.txt` (encrypted if enabled).  
 
 ## Features
 
