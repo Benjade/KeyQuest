@@ -1241,11 +1241,11 @@ int main(int argc, char* argv[])
         }
         std::vector<Int> deltaX(g_pointsBatchSize);
         IntGroup modGroup(g_pointsBatchSize);
-	std::vector<std::array<uint8_t,33>> pubKeys(fullBatch);
-	std::array<std::array<uint8_t,20>, HASH_BATCH_SIZE> hashOut;
+        std::vector<std::array<uint8_t,33>> pubKeys(fullBatch);
+        std::array<std::array<uint8_t,20>, HASH_BATCH_SIZE> hashOut;
         __m128i targ16 = _mm_loadu_si128((const __m128i*)targetHash.data());
-
         unsigned long long localCount = 0;
+        std::vector<Point> pBatch(fullBatch);
 
         while(!g_found.load()){
             if(seqPrefix > seqEndNum){
@@ -1319,8 +1319,6 @@ int main(int argc, char* argv[])
                 modGroup.Set(deltaX.data());
                 modGroup.ModInv();
 
-                std::vector<Point> pBatch(fullBatch);
-                // build pBatch[0..g_pointsBatchSize-1] = plus points
                 for(int j=0;j<g_pointsBatchSize;++j){
                     Point t = startP;
                     Int dY; dY.ModSub(&plusP[j].y, &startP.y);
