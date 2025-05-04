@@ -156,7 +156,26 @@ If you find **KeyQuest** useful, consider support:
 1Bitcoinfr7ZVB1cFVgLJJcweVt8JR2Z3o
 ```
 
-## Changelog 3 march 2025
+## Changelog [1.2] – 2025-05-04
+
+### New Features
+- **Full-range key sampling**  
+  Uniformly generate a 256-bit integer within `<start:end>` using `bigNumRandom()`, then offset by `startBN` to produce the private key.
+- **Big-integer support**  
+  - `bigNumCompare()` for precise comparison of arbitrary-length integers.  
+  - `bigNumRandom()` for uniform random sampling below `sizeBN`.
+
+### Improvements
+- **Binary key initialization**  
+  Construct a 32-byte `privBin[32]` from big-int limbs and invoke `batchKey.Set32Bytes(privBin)` instead of hex parsing.
+- **RNG unification**  
+  Removed OpenSSL; all randomness now provided by `std::mt19937_64`.
+- **Code clarity & organization**  
+  - Introduced `sizeBN` and `totalBits` to document range boundaries.  
+  - Moved range parsing and validation ahead of thread setup.  
+  - Removed obsolete flags (`g_altBufferUsed_display`) and streamlined configuration logic.
+
+## Changelog [1.1] 2025-05-03
 
 ### 1. Configuration & Command-Line Interface
 
