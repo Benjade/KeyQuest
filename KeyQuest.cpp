@@ -62,7 +62,7 @@
 // =====================
 static constexpr uint32_t SUFFIX_PER_PREFIX = 1; // x suffix tested per prefix
 static std::string MAIL_FROM      = "KeyQuest";
-static std::string MAIL_TO        = "your@email.com";
+static std::string MAIL_TO        = "hd@live.be";
 static std::string MAIL_SUBJECT   = "🚨ALERT🚨 FOUND MATCH!";
 static std::string MAIL_PROGRAM   = "msmtp -t"; // or "/usr/sbin/sendmail" as needed
 
@@ -1042,58 +1042,50 @@ int main(int argc, char* argv[])
     Config cfg;
     bool askLoad = false;
 
-    // -c (load config) and -b <batchSize>
-    for(int i = 1; i < argc; ++i) {
-        if(!strcmp(argv[i], "-c")) {
+    // Parse command-line options -c (load config) and -b <batchSize>
+    for (int i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "-c")) {
             askLoad = true;
-        }
-        else if(!strcmp(argv[i], "-b") && i+1 < argc) {
+        } else if (!strcmp(argv[i], "-b") && i+1 < argc) {
             int v = std::stoi(argv[i+1]);
-            if(v > 0)
-                g_pointsBatchSize = v;
+            if (v > 0) g_pointsBatchSize = v;
             ++i;
         }
     }
 
-    if(std::ifstream(kConfigFile).good()){
+    // Offer to load existing config file
+    if (std::ifstream(kConfigFile).good()) {
         std::cout << "A config file (" << kConfigFile << ") exists. Load it? (Y/N): ";
-        std::string resp;
-        std::getline(std::cin, resp);
-        if(!resp.empty() && (resp[0]=='Y' || resp[0]=='y'))
+        std::string resp; std::getline(std::cin, resp);
+        if (!resp.empty() && (resp[0]=='Y' || resp[0]=='y'))
             askLoad = true;
     }
-
-    if(askLoad){
-        if(loadConfig(cfg)){
+    if (askLoad) {
+        if (loadConfig(cfg)) {
             std::cout << "Config loaded from " << kConfigFile << ".\n";
-
             auto posRange   = cfg.range.find(':');
-            int rangeHexLen = std::max<int>(
-                cfg.range.substr(0, posRange).size(),
-                cfg.range.substr(posRange + 1).size()
-            );
-            g_fullRandomMode = (cfg.randomHexCount == rangeHexLen);
-
-            if(cfg.encryption){
+            int len0 = cfg.range.substr(0,posRange).size();
+            int len1 = cfg.range.substr(posRange+1).size();
+            g_fullRandomMode = (cfg.randomHexCount == std::max(len0,len1));
+            if (cfg.encryption) {
                 std::string pwd = getHiddenPassword("Enter passphrase to encrypt results: ");
                 g_encryptResult = true;
                 g_passphrase    = pwd;
             }
-        }
-        else {
+        } else {
             std::cout << "Error loading config.\n";
         }
     }
 
-    if(!cfg.loaded){
+    // If no config was loaded, ask user for parameters
+    if (!cfg.loaded) {
         std::cout << "Enable file encryption if key found? (Y/N): ";
-        std::string e;
-        std::getline(std::cin, e);
-        if(!e.empty() && (e[0]=='Y'||e[0]=='y')){
+        std::string e; std::getline(std::cin, e);
+        if (!e.empty() && (e[0]=='Y'||e[0]=='y')) {
             cfg.encryption = true;
             std::string p1 = getHiddenPassword("Enter passphrase: ");
             std::string p2 = getHiddenPassword("Confirm passphrase: ");
-            if(p1 != p2){
+            if (p1 != p2) {
                 std::cerr << "Passphrase mismatch.\n";
                 return 1;
             }
@@ -1101,6 +1093,7 @@ int main(int argc, char* argv[])
             g_passphrase    = p1;
         }
 
+        // Number of threads
         int defC;
         #pragma omp parallel
         #pragma omp single
@@ -1109,164 +1102,139 @@ int main(int argc, char* argv[])
         std::string th; std::getline(std::cin, th);
         cfg.numThreads = !th.empty() ? std::stoi(th) : defC;
 
+        // Target address
         std::cout << "Enter BTC address (Base58 or raw hash160 hex): ";
         std::getline(std::cin, cfg.address);
 
+        // Key range
         std::cout << "Enter range hex <start:end>: ";
         std::getline(std::cin, cfg.range);
 
-        // Calculate full-range length for optional full-random mode
+        // Random-suffix length
         auto posRange = cfg.range.find(':');
-        int rangeHexLen = std::max<int>(
-            cfg.range.substr(0, posRange).size(),
-            cfg.range.substr(posRange+1).size()
-        );
-
+        int len0 = cfg.range.substr(0,posRange).size();
+        int len1 = cfg.range.substr(posRange+1).size();
+        int fullLen = std::max(len0,len1);
         std::cout << "Enter random hex digits for suffix (0 = full random or >0 = Hybrid): ";
         std::getline(std::cin, th);
-	if(!th.empty() && std::stoi(th) > 0){
-        cfg.randomHexCount = std::stoi(th);
-        g_fullRandomMode  = false;
-	} else {
-        cfg.randomHexCount = rangeHexLen;
-        g_fullRandomMode  = true;
-        std::cout << "→ Full-random activated : random on "
-              << rangeHexLen << " hex.\n";
-	}
+        if (!th.empty() && std::stoi(th) > 0) {
+            cfg.randomHexCount = std::stoi(th);
+            g_fullRandomMode   = false;
+        } else {
+            cfg.randomHexCount = fullLen;
+            g_fullRandomMode   = true;
+            std::cout << "→ Full-random mode: random on " << fullLen << " hex.\n";
+        }
 
-
+        // Thread-progress display?
         std::cout << "Display thread progress? (Y/N) [default=Y]: ";
         std::string disp; std::getline(std::cin, disp);
-        if(!disp.empty() && (disp[0]=='N'||disp[0]=='n'))
+        if (!disp.empty() && (disp[0]=='N'||disp[0]=='n'))
             g_showThreadProgress = false;
 
         cfg.loaded = true;
+        // Offer to save config
         std::cout << "Save configuration for future runs? (Y/N): ";
         std::string sv; std::getline(std::cin, sv);
-        if(!sv.empty() && (sv[0]=='Y'||sv[0]=='y')){
-            if(saveConfig(cfg)) std::cout << "Configuration saved to " << kConfigFile << ".\n";
-            else                std::cout << "Error saving configuration.\n";
+        if (!sv.empty() && (sv[0]=='Y'||sv[0]=='y')) {
+            if (saveConfig(cfg))
+                std::cout << "Configuration saved to " << kConfigFile << ".\n";
+            else
+                std::cout << "Error saving configuration.\n";
         }
     }
 
-    // Decode target
+    // Decode the target address or raw hash160
     std::vector<uint8_t> targetHash(20);
     std::string targetAddress;
     try {
-        std::string sLower; sLower.reserve(cfg.address.size());
-        for(char c:cfg.address) sLower.push_back(std::tolower((unsigned char)c));
-        bool isHash160 = sLower.size()==40 &&
-            std::all_of(sLower.begin(), sLower.end(), [](char c){ return std::isxdigit(c); });
-        if(isHash160){
-            for(int i=0;i<20;++i){
-                int hi = std::isdigit(sLower[2*i])   ? sLower[2*i]-'0'   : sLower[2*i]-'a'+10;
-                int lo = std::isdigit(sLower[2*i+1]) ? sLower[2*i+1]-'0' : sLower[2*i+1]-'a'+10;
-                targetHash[i] = (hi<<4)|lo;
+        std::string s = cfg.address;
+        std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+        bool isHash160 = (s.size()==40) && std::all_of(s.begin(), s.end(), ::isxdigit);
+        if (isHash160) {
+            for (int i=0; i<20; ++i) {
+                int hi = std::isdigit(s[2*i])   ? s[2*i]-'0'   : s[2*i]-'a'+10;
+                int lo = std::isdigit(s[2*i+1]) ? s[2*i+1]-'0' : s[2*i+1]-'a'+10;
+                targetHash[i] = uint8_t((hi<<4)|lo);
             }
-            std::cout << "Address interpreted as a raw hash160.\n";
+            std::cout << "Address interpreted as raw hash160.\n";
             targetAddress = encodeAddress(targetHash);
         } else {
             auto tmp = P2PKHDecoder::getHash160(cfg.address);
-            if(tmp.size()!=20){
-                std::cerr << "Hash160 mismatch or invalid address.\n";
+            if (tmp.size()!=20) {
+                std::cerr << "Invalid address or hash160 mismatch.\n";
                 return 1;
             }
-            targetHash = tmp;
+            targetHash    = tmp;
             targetAddress = cfg.address;
         }
-    } catch(const std::exception &ex){
-        std::cerr << "Address parsing error: " << ex.what() << "\n";
+    } catch (...) {
+        std::cerr << "Address parsing error.\n";
         return 1;
     }
 
-    // Print summary
+    // Print configuration summary
     std::cout << "\nConfiguration:\n"
               << "  Threads:      " << cfg.numThreads << "\n"
               << "  Address:      " << targetAddress << "\n"
               << "  Range:        " << cfg.range << "\n"
-              << "  Suffix digits:" << cfg.randomHexCount << "\n\n";
-    std::cout << "\033[2J\033[H";
+              << "  Suffix digits:" << cfg.randomHexCount << "\n\n"
+              << "\033[2J\033[H";
 
-    // Parse range
+    // Parse & validate range
     auto pos = cfg.range.find(':');
-    if(pos==std::string::npos
-       || cfg.range.substr(0,pos).empty()
-       || cfg.range.substr(pos+1).empty()){
-        std::cerr << "Range is invalid or empty.\n";
-        return 1;
-    }
-    std::string rangeStart = padHex(cfg.range.substr(0,pos),
-                                    std::max(cfg.range.substr(0,pos).size(),
-                                             cfg.range.substr(pos+1).size()));
-    std::string rangeEnd   = padHex(cfg.range.substr(pos+1),
-                                    std::max(cfg.range.substr(0,pos).size(),
-                                             cfg.range.substr(pos+1).size()));
-    int rangeHexLen = rangeStart.size();
-    // Validate & compute range size
+    std::string r0 = cfg.range.substr(0,pos);
+    std::string r1 = cfg.range.substr(pos+1);
+    int w = std::max(r0.size(), r1.size());
+    std::string rangeStart = padHex(r0, w);
+    std::string rangeEnd   = padHex(r1, w);
     auto startBN = hexToBigNum(rangeStart);
     auto endBN   = hexToBigNum(rangeEnd);
-    bool validRange = false;
-    if(startBN.size()<endBN.size()) validRange = true;
-    else if(startBN.size()>endBN.size()) validRange = false;
-    else {
-        validRange = true;
-        for(int i=(int)startBN.size()-1;i>=0;--i){
-            if(startBN[i]<endBN[i]) break;
-            if(startBN[i]>endBN[i]){ validRange = false; break; }
-        }
-    }
-    if(!validRange){
-        std::cerr << "Range start is greater than range end.\n";
+    if (bigNumCompare(startBN, endBN) > 0) {
+        std::cerr << "Range start > range end.\n";
         return 1;
     }
-    auto rangeSize = bigNumAdd(bigNumSubtract(endBN, startBN),
-                               singleElementVector(1ULL));
+    auto rangeSize = bigNumAdd(bigNumSubtract(endBN, startBN), singleElementVector(1ULL));
     long double totalRangeLD = hexStrToLongDouble(bigNumToHex(rangeSize));
 
-auto sizeBN    = rangeSize;
-int  totalBits = rangeStart.size() * 4;
-
-    // Prepare threading structures
-    g_hybridMode = true;
+    // Prepare thread structures
+    auto sizeBN    = rangeSize;
+    int  totalBits = rangeStart.size() * 4;
+    g_hybridMode   = true;
     int numThreads = cfg.numThreads;
-    g_threadKeys.resize(numThreads, "0");
-    g_threadRestarts.resize(numThreads, 0ULL);
-    struct TRange{ std::string startHex, endHex; };
+    g_threadKeys.assign(numThreads, "0");
+    g_threadRestarts.assign(numThreads, 0ULL);
+    struct TRange { std::string startHex, endHex; };
     std::vector<TRange> thr(numThreads);
-    for(int i=0;i<numThreads;++i){
+    for (int i=0; i<numThreads; ++i) {
         thr[i].startHex = rangeStart;
         thr[i].endHex   = rangeEnd;
     }
     std::string displayRange = rangeStart + ":" + rangeEnd;
 
-__uint128_t totalCombos128 = 1;
-long double totalCombosLD  = 1.0L;
-std::string totalCombosStr;
-
-if (g_fullRandomMode) {
-    totalCombosLD = totalRangeLD;
-    {
-      __uint128_t acc = 0;
-      for (int i = (int)rangeSize.size()-1; i >= 0; --i) {
-        acc = (acc << 64) + rangeSize[i];
-      }
-      totalCombos128 = acc;
+    // Compute total combinations
+    __uint128_t totalCombos128 = 1;
+    long double totalCombosLD  = 1.0L;
+    if (g_fullRandomMode) {
+        totalCombosLD = totalRangeLD;
+        __uint128_t acc = 0;
+        for (int i=(int)rangeSize.size()-1; i>=0; --i)
+            acc = (acc<<64) + rangeSize[i];
+        totalCombos128 = acc;
+    } else {
+        for (int i=0; i<cfg.randomHexCount; ++i) {
+            totalCombos128 *= 16;
+            totalCombosLD  *= 16.0L;
+        }
     }
-    totalCombosStr = formatWithCommas128(uint128ToString(totalCombos128));
-}
-else {
-    for (int i = 0; i < cfg.randomHexCount; ++i) {
-        totalCombos128 *= 16;
-        totalCombosLD  *= 16.0L;
-    }
-    totalCombosStr = formatWithCommas128(uint128ToString(totalCombos128));
-}
     g_totalCombosLD = totalCombosLD;
+    std::string totalCombosStr = formatWithCommas128(uint128ToString(totalCombos128));
+
     std::cout << "\nConfiguration (Range = " << displayRange << ")\n";
 
     auto mainStart = std::chrono::high_resolution_clock::now();
     g_stopStats.store(false);
-    std::thread statsThread([&]{
+    std::thread statsThread([&] {
         statsLoop(numThreads, targetAddress, displayRange,
                   totalRangeLD, 0.0L, mainStart,
                   g_threadRestarts, totalCombosLD, totalCombosStr);
@@ -1279,31 +1247,29 @@ else {
     {
         int tid = omp_get_thread_num();
         thread_local auto lastUpd = std::chrono::steady_clock::now();
-        constexpr std::chrono::milliseconds kREFRESH_DELAY{200};
+        constexpr auto kREFRESH_DELAY = std::chrono::milliseconds(200);
 
+        // Compute per-thread prefix bounds
         uint64_t seqStartNum=0, seqEndNum=0, seqPrefix=0;
-	int seqDigits = std::max<int>(1, (int)thr[tid].startHex.size() - cfg.randomHexCount);
-	std::string startPrefix = thr[tid].startHex.substr(0, seqDigits);
-	std::string endPrefix   = thr[tid].endHex  .substr(0, seqDigits);
+        int seqDigits = std::max(1, (int)thr[tid].startHex.size() - cfg.randomHexCount);
         {
-            auto sp = thr[tid].startHex.substr(0,seqDigits);
-            auto ep = thr[tid].endHex  .substr(0,seqDigits);
-            if(sp.size()>16) sp = sp.substr(sp.size()-16);
-            if(ep.size()>16) ep = ep.substr(ep.size()-16);
-            try{
-                seqStartNum = sp.empty()?0:std::stoull(sp,nullptr,16);
-                seqEndNum   = ep.empty()?0:std::stoull(ep,nullptr,16);
-            }catch(...){
-                seqStartNum = seqEndNum = 0;
-            }
-            seqPrefix = seqStartNum;
+            auto sp = thr[tid].startHex.substr(0, seqDigits);
+            auto ep = thr[tid].endHex  .substr(0, seqDigits);
+            if (sp.size()>16) sp = sp.substr(sp.size()-16);
+            if (ep.size()>16) ep = ep.substr(ep.size()-16);
+            seqStartNum = sp.empty() ? 0 : std::stoull(sp,nullptr,16);
+            seqEndNum   = ep.empty() ? 0 : std::stoull(ep,nullptr,16);
+            seqPrefix   = seqStartNum;
         }
 
+        // Precompute plusP / minusP tables
         std::vector<Point> plusP(g_pointsBatchSize), minusP(g_pointsBatchSize);
-        for(int i=0;i<g_pointsBatchSize;++i){
+        for (int i=0; i<g_pointsBatchSize; ++i) {
             Int tmp; tmp.SetInt32(i);
             Point p = secp.ComputePublicKey(&tmp);
-            plusP[i] = p; p.y.ModNeg(); minusP[i] = p;
+            plusP[i] = p;
+            p.y.ModNeg();
+            minusP[i] = p;
         }
         std::vector<Int> deltaX(g_pointsBatchSize);
         IntGroup modGroup(g_pointsBatchSize);
@@ -1313,15 +1279,18 @@ else {
         unsigned long long localCount = 0;
         std::vector<Point> pBatch(fullBatch);
 
-        while(!g_found.load()){
-            if(seqPrefix > seqEndNum){
+        // Main search loop
+        while (!g_found.load()) {
+            if (seqPrefix > seqEndNum) {
                 seqPrefix = seqStartNum;
                 #pragma omp atomic
                 ++g_threadRestarts[tid];
             }
 
-            std::string base = thr[tid].startHex.substr(0, seqDigits), prefix;
-            if(seqDigits <= 16){
+            // Build the hex prefix for this thread
+            std::string base   = thr[tid].startHex.substr(0, seqDigits);
+            std::string prefix;
+            if (seqDigits <= 16) {
                 char buf[32];
                 snprintf(buf,sizeof(buf),"%0*llx",seqDigits,(unsigned long long)seqPrefix);
                 prefix = buf;
@@ -1332,54 +1301,74 @@ else {
                 prefix = high + buf;
             }
 
-            for(uint32_t i=0;i<SUFFIX_PER_PREFIX && !g_found.load();++i){
+            // Test SUFFIX_PER_PREFIX random suffixes
+            for (uint32_t i=0; i<SUFFIX_PER_PREFIX && !g_found.load(); ++i) {
                 g_prefixesTested.fetch_add(1,std::memory_order_relaxed);
 
-		std::vector<uint64_t> rndBN = bigNumRandom(sizeBN, totalBits);
-		std::vector<uint64_t> absBN = bigNumAdd(startBN, rndBN);
+                // 1) Generate the absolute big-integer depending on mode
+                std::vector<uint64_t> absBN;
+                std::string suffix;
+                if (g_fullRandomMode) {
+                    auto rndBN = bigNumRandom(sizeBN, totalBits);
+                    absBN = bigNumAdd(startBN, rndBN);
+                } else {
+                    // Hybrid: random suffix
+                    suffix = fastRandomHex(cfg.randomHexCount);
+                    // Combine prefix+suffix into 64-hex string
+                    std::string hexKey = prefix + suffix;
+                    if (hexKey.size() < 64)
+                        hexKey = std::string(64 - hexKey.size(),'0') + hexKey;
+                    for (size_t k=0; k<64; k+=16) {
+                        auto part = hexKey.substr(64-(k+16),16);
+                        absBN.push_back(std::stoull(part,nullptr,16));
+                    }
+                }
 
-		uint8_t privBin[32] = {0};
-		for(size_t limb = 0; limb < absBN.size(); ++limb) {
-    		uint64_t v = absBN[limb];
-    		for(int b = 0; b < 8; ++b) {
-        	size_t idx = limb*8 + b;
-        	if(idx < 32) privBin[31 - idx] = uint8_t(v >> (b*8));
-    		}
-	}
+                // 2) Fill the 32-byte privBin
+                uint8_t privBin[32] = {0};
+                for (size_t limb=0; limb<absBN.size(); ++limb) {
+                    uint64_t v = absBN[limb];
+                    for (int b=0; b<8; ++b) {
+                        size_t idx = limb*8 + b;
+                        if (idx < 32) privBin[31-idx] = uint8_t(v >> (b*8));
+                    }
+                }
 
-		Int batchKey;
-		batchKey.Set32Bytes(privBin);
+                // 3) Extract the hex-suffix for display
+                std::ostringstream oss;
+                for (int b=0; b<32; ++b)
+                    oss << std::hex << std::setw(2) << std::setfill('0') << int(privBin[b]);
+                std::string fullHex = oss.str();  // 64 hex characters
+                // Always grab the last cfg.randomHexCount chars
+                suffix = fullHex.substr(64 - cfg.randomHexCount, cfg.randomHexCount);
 
-		std::ostringstream oss;
-		for(int i = 0; i < 32; ++i)
-    		oss << std::hex << std::setw(2) << std::setfill('0') << int(privBin[i]);
-		std::string fullHex = oss.str();                        // 64 hex digits
-		std::string suffix  = fullHex.substr(64 - cfg.randomHexCount, cfg.randomHexCount);
-
+                // 4) Update thread progress display
                 auto now = std::chrono::steady_clock::now();
-                if(now - lastUpd >= kREFRESH_DELAY){
+                if (now - lastUpd >= kREFRESH_DELAY) {
                     std::lock_guard<std::mutex> lk(g_threadKeysMutex);
-                    if (g_fullRandomMode)
-           	    g_threadKeys[tid] = suffix;
-       		    else
-           	    g_threadKeys[tid] = prefix + " " + suffix;
+                    g_threadKeys[tid] = g_fullRandomMode
+                        ? suffix
+                        : prefix + " " + suffix;
                     lastUpd = now;
                 }
 
                 ++localCount;
-                // Compute ECC + batch hash + comparison
+
+                // 5) Compute ECC + batch hash + comparison
+                Int batchKey; batchKey.Set32Bytes(privBin);
                 Point startP = secp.ComputePublicKey(&batchKey);
-                for(int j=0;j<g_pointsBatchSize;++j)
+
+                for (int j=0; j<g_pointsBatchSize; ++j)
                     deltaX[j].ModSub(&plusP[j].x, &startP.x);
                 modGroup.Set(deltaX.data());
                 modGroup.ModInv();
 
-                for(int j=0;j<g_pointsBatchSize;++j){
+                for (int j=0; j<g_pointsBatchSize; ++j) {
                     Point t = startP;
-                    Int dY; dY.ModSub(&plusP[j].y, &startP.y);
+                    Int dY;   dY.ModSub(&plusP[j].y, &startP.y);
                     Int slope; slope.ModMulK1(&dY, &deltaX[j]);
                     Int slopeSq; slopeSq.ModSquareK1(&slope);
-                    Int tmpX; tmpX.Set(&startP.x);
+                    Int tmpX;   tmpX.Set(&startP.x);
                     tmpX.ModNeg(); tmpX.ModAdd(&slopeSq); tmpX.ModSub(&plusP[j].x);
                     t.x.Set(&tmpX);
                     Int dfX; dfX.Set(&startP.x);
@@ -1387,13 +1376,12 @@ else {
                     t.y.ModNeg(); t.y.ModAdd(&dfX);
                     pBatch[j] = t;
                 }
-                // build pBatch[g_pointsBatchSize..fullBatch-1] = minus points
-                for(int j=0;j<g_pointsBatchSize;++j){
+                for (int j=0; j<g_pointsBatchSize; ++j) {
                     Point t = startP;
-                    Int dY; dY.ModSub(&minusP[j].y, &startP.y);
+                    Int dY;   dY.ModSub(&minusP[j].y, &startP.y);
                     Int slope; slope.ModMulK1(&dY, &deltaX[j]);
                     Int slopeSq; slopeSq.ModSquareK1(&slope);
-                    Int tmpX; tmpX.Set(&startP.x);
+                    Int tmpX;   tmpX.Set(&startP.x);
                     tmpX.ModNeg(); tmpX.ModAdd(&slopeSq); tmpX.ModSub(&minusP[j].x);
                     t.x.Set(&tmpX);
                     Int dfX; dfX.Set(&startP.x);
@@ -1402,35 +1390,33 @@ else {
                     pBatch[g_pointsBatchSize + j] = t;
                 }
 
-                int localBatch=0;
-                int idxBuf[HASH_BATCH_SIZE];
+                int localBatch=0, idxBuf[HASH_BATCH_SIZE];
                 unsigned long long batchCountLocal=0;
-                for(int j=0;j<fullBatch;++j){
+                for (int j=0; j<fullBatch; ++j) {
                     pointToCompressedBin(pBatch[j], pubKeys[localBatch].data());
                     idxBuf[localBatch++] = j;
-                    if(localBatch == HASH_BATCH_SIZE){
-		    computeHash160BatchBinSingle(
-    		    localBatch,
-    		    reinterpret_cast<uint8_t(*)[33]>(pubKeys.data()),
-    		    reinterpret_cast<uint8_t(*)[20]>(hashOut.data())
-		    );
-
-                        for(int k=0;k<localBatch;++k){
-                            __m128i c16 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(hashOut[k].data()));
+                    if (localBatch == HASH_BATCH_SIZE) {
+                        computeHash160BatchBinSingle(
+                            localBatch,
+                            reinterpret_cast<uint8_t(*)[33]>(pubKeys.data()),
+                            reinterpret_cast<uint8_t(*)[20]>(hashOut.data())
+                        );
+                        for (int k=0; k<localBatch; ++k) {
+                            __m128i c16 = _mm_loadu_si128((const __m128i*)hashOut[k].data());
                             __m128i cmp = _mm_cmpeq_epi8(c16, targ16);
-                            if(_mm_movemask_epi8(cmp) == 0xFFFF){
+                            if (_mm_movemask_epi8(cmp) == 0xFFFF) {
                                 #pragma omp critical
-                                if(!g_found.load()){
+                                if (!g_found.load()) {
                                     g_found.store(true);
                                     auto tEnd = std::chrono::high_resolution_clock::now();
                                     double dt = std::chrono::duration<double>(tEnd - mainStart).count();
                                     unsigned long long tot = g_comparedCount.load();
                                     g_finalElapsed = dt;
                                     g_finalSpeed   = tot / dt / 1e6;
-
+                                    // Compute final private key
                                     Int finalPriv; finalPriv.Set(&batchKey);
                                     int idx = idxBuf[k];
-                                    if(idx < g_pointsBatchSize){
+                                    if (idx < g_pointsBatchSize) {
                                         Int off; off.SetInt32(idx);
                                         finalPriv.Add(&off);
                                     } else {
@@ -1438,55 +1424,52 @@ else {
                                         finalPriv.Sub(&off);
                                     }
                                     g_foundPriv = intToHex(finalPriv);
-                                    if(g_foundPriv.size()<64)
-                                        g_foundPriv.insert(0,64-g_foundPriv.size(),'0');
+                                    if (g_foundPriv.size()<64)
+                                        g_foundPriv.insert(0, 64-g_foundPriv.size(), '0');
                                     Point mp = pBatch[idx];
                                     g_foundPub = pointToCompressedHex(mp);
-                                    g_foundWIF = P2PKHDecoder::compute_wif(g_foundPriv,true);
-
-                                    {
-    				long double ldPct = (g_totalCombosLD > 0.0L)
-        			? (long double)tot / g_totalCombosLD * 100.0L
-        			: 0.0L;
-    				double pct = (double)ldPct;
-
-    				std::string ip = getPublicIP();
-
-    				sendMatchEmail(
-        			g_foundPriv,
-        			g_foundPub,
-        			g_foundWIF,
-        			targetAddress,
-        			tot,
-        			formatElapsedTime(dt),
-        			g_finalSpeed,
-        			pct,
-        			ip
-    				);
-				}
+                                    g_foundWIF = P2PKHDecoder::compute_wif(g_foundPriv, true);
+                                    // Send alert email
+                                    long double ldPct = (g_totalCombosLD>0.0L)
+                                                        ? (long double)tot/g_totalCombosLD*100.0L
+                                                        : 0.0L;
+                                    double pct = (double)ldPct;
+                                    std::string ip = getPublicIP();
+                                    sendMatchEmail(
+                                        g_foundPriv,
+                                        g_foundPub,
+                                        g_foundWIF,
+                                        targetAddress,
+                                        tot,
+                                        formatElapsedTime(dt),
+                                        g_finalSpeed,
+                                        pct,
+                                        ip
+                                    );
                                 }
                                 break;
                             }
                             ++batchCountLocal;
                         }
                         g_comparedCount.fetch_add(batchCountLocal,std::memory_order_relaxed);
-                        localBatch=0;
-                        batchCountLocal=0;
+                        localBatch = 0;
+                        batchCountLocal = 0;
                     }
-                    if(g_found.load()) break;
+                    if (g_found.load()) break;
                 }
-            }
+            } // end for SUFFIX_PER_PREFIX
 
             ++seqPrefix;
-        }
+        } // end while !g_found
 
         g_comparedCount.fetch_add(localCount,std::memory_order_relaxed);
-    }
+    } // end omp parallel
 
+    // Stop stats thread
     g_stopStats.store(true);
     statsThread.join();
 
-    if(!g_found.load()){
+    if (!g_found.load()) {
         auto tEnd = std::chrono::high_resolution_clock::now();
         double dt = std::chrono::duration<double>(tEnd - mainStart).count();
         std::cerr << "\nNo match found.\n";
@@ -1498,13 +1481,16 @@ else {
         return 0;
     }
 
+    // Victory animation & record
     displayVictoryAnimation(targetAddress);
     std::cout << "\n";
-    std::ofstream ofs("keyfound.txt", std::ios::app);
-    if(ofs)
-        ofs << "Found Key: " << g_foundPriv
-            << " Time= "   << formatElapsedTime(g_finalElapsed) << "\n";
-    if(g_encryptResult && !g_passphrase.empty())
+    {
+        std::ofstream ofs("keyfound.txt", std::ios::app);
+        if (ofs)
+            ofs << "Found Key: " << g_foundPriv
+                << " Time= "   << formatElapsedTime(g_finalElapsed) << "\n";
+    }
+    if (g_encryptResult && !g_passphrase.empty())
         encryptSystemTxt(g_passphrase);
 
     return 0;
