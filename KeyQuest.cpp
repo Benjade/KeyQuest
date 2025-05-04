@@ -62,7 +62,7 @@
 // =====================
 static constexpr uint32_t SUFFIX_PER_PREFIX = 1; // x suffix tested per prefix
 static std::string MAIL_FROM      = "KeyQuest";
-static std::string MAIL_TO        = "hd@live.be";
+static std::string MAIL_TO        = "your@email.com";
 static std::string MAIL_SUBJECT   = "🚨ALERT🚨 FOUND MATCH!";
 static std::string MAIL_PROGRAM   = "msmtp -t"; // or "/usr/sbin/sendmail" as needed
 
