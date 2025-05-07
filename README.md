@@ -155,6 +155,22 @@ If you find **KeyQuest** useful, consider support:
 ```
 1Bitcoinfr7ZVB1cFVgLJJcweVt8JR2Z3o
 ```
+## Changelog [1.3] – 2025-05-07
+
+### Build system — `Makefile`
+* **Portable flags**   `CPU`, `PROF`, `LTO` variables allow:
+  * ISA selection (`generic`, `native`, `znver1`, …)  
+  * debug / release / two‑pass **PGO** builds  
+  * optional link‑time optimisation (`-flto=auto`)
+* **Linker autodetect** &nbsp;(`mold → gold → bfd`) via&nbsp;``-fuse-ld``&nbsp;fixes the previous error.
+* Dropped hard ``-fno-exceptions`` / ``-fno-rtti`` to restore normal exception handling.
+* Common optimisation switches gathered in ``BASEFLAGS``.
+* New helper targets: `dev`, full `pgo`, and `fix_rdtsc`.
+* `clean` also removes profiling artefacts.
+
+### Core code
+* ``HASH_BATCH_SIZE`` **increased 8 → 16**.  
+  SHA‑256 + RIPEMD‑160 path now feeds the AVX2 kernels in two consecutive 8‑wide waves, giving roughly **+8–10 %** throughput (model‑dependent).
 
 ## Changelog [1.2] – 2025-05-04
 
