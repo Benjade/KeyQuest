@@ -1,4 +1,4 @@
-# KeyQuest V1.2
+# KeyQuest V1.3
 
 **KeyQuest** is a high-performance C++ tool designed to tackle challenging Bitcoin cryptographic puzzles on CPU, such as the 1000 Bitcoin Puzzle (see [~1000 BTC Bitcoin Challenge](https://privatekeys.pw/puzzles/bitcoin-puzzle-tx)). It performs a hybrid or random search combining deterministic range scanning exploration to find a private key matching a given address.
 
